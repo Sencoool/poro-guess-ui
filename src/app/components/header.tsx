@@ -59,7 +59,7 @@ export default function Header() {
       <Link href="/" className="group flex items-center gap-3 transition-transform duration-200 hover:scale-[1.02]">
         <div className="relative">
           <img 
-            src="/img/logo.png" 
+            src="/img/logo.png?v=2" 
             alt="Poro Guess Logo" 
             className="w-11 h-11 object-contain rounded-full border border-white/20 transition-transform duration-200 group-hover:rotate-6" 
           />

@@ -196,21 +196,13 @@ export default function ProfileModal({ show, user, onClose }: ProfileModalProps)
       >
         {/* Modal Panel */}
         <div
-          className="w-full max-w-[520px] rounded-[2rem] bg-gradient-to-b from-[#111827] to-[#0d1524] border border-zinc-700/60 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] relative flex flex-col"
-          style={{ animation: "answerDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards" }}
+          className="w-full max-w-[520px] rounded-[2rem] bg-[#0d1524] border border-zinc-800 shadow-2xl relative flex flex-col transform-gpu"
+          style={{ 
+            animation: "answerDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards",
+            willChange: "transform, opacity"
+          }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* ── Rank accent bar ── */}
-          <div className="h-1 w-full" style={{ backgroundColor: rankInfo.color }} />
-
-          {/* ── Header Background Graphic ── */}
-          <div 
-            className="absolute top-0 left-0 right-0 h-32 opacity-20 pointer-events-none"
-            style={{ 
-              background: `radial-gradient(circle at top, ${rankInfo.color}, transparent 70%)` 
-            }}
-          />
-
           {/* ── User Header ── */}
           <div className="p-6 pb-2 flex items-start gap-4 relative z-10">
             <div className="relative shrink-0">
