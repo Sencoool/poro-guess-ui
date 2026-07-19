@@ -27,11 +27,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="relative min-h-screen bg-black text-white selection:bg-blue-900">
-          {/* Global Background Image */}
+        <div className="relative min-h-screen bg-[#060b14] text-white selection:bg-blue-900">
+          {/* Global Background Image - using will-change to promote to its own GPU layer */}
           <div 
-            className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-80"
-            style={{ backgroundImage: "url('/PoroGuessBG.jpg')" }}
+            className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
+            style={{ 
+              backgroundImage: "url('/PoroGuessBG.jpg')",
+              willChange: "transform",
+              opacity: 0.8,
+            }}
           />
           
           {/* Main Content Area */}

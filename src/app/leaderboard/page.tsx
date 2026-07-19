@@ -59,18 +59,25 @@ export default function Leaderboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white flex flex-col font-sans selection:bg-blue-500/30">
+    <div className="flex flex-col flex-1 selection:bg-blue-500/30">
       <Header />
       
       <main className="flex-1 flex flex-col items-center max-w-4xl mx-auto w-full px-4 py-12">
-        <div className="text-center mb-10">
-          <h1 className="text-5xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-br from-blue-300 to-blue-600 drop-shadow-sm mb-4">
-            LEADERBOARD
-          </h1>
-          <p className="text-zinc-400 font-medium tracking-wide">Top 500 Players</p>
+        <div className="text-center mb-12">
+          <div className="inline-block px-14 py-8 rounded-3xl bg-gradient-to-b from-[#1e293b] to-[#0f172a] border border-blue-500/20 shadow-[0_0_50px_rgba(59,130,246,0.15)] relative overflow-hidden">
+            <div className="absolute inset-0 bg-blue-500/5 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-30 mix-blend-overlay"></div>
+            <div className="relative z-10">
+              <h1 className="text-5xl sm:text-6xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-cyan-400 drop-shadow-md mb-4">
+                LEADERBOARD
+              </h1>
+              <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-blue-950/50 border border-blue-500/30 shadow-inner">
+                <span className="text-blue-300 font-bold tracking-[0.2em] text-xs uppercase">🏆 TOP 500 PLAYERS 🏆</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="w-full bg-[#1e293b]/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-md">
+        <div className="w-full bg-[#1e293b]/95 border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
           {/* Header Row */}
           <div className="flex items-center px-6 py-4 border-b border-white/10 bg-white/5 text-xs font-bold text-zinc-400 uppercase tracking-wider">
             <div className="w-16 text-center">Rank</div>
@@ -128,7 +135,7 @@ export default function Leaderboard() {
                           src={getImageUrl(player.iconPath)} 
                           alt={player.username} 
                           className="w-12 h-12 rounded-xl object-cover border border-white/10"
-                          onError={(e) => (e.currentTarget.src = "/img/Red.png")}
+                          onError={(e) => (e.currentTarget.src = "/img/default-avatar.png")}
                         />
                         <div className="absolute -bottom-2 -right-2 bg-[#0f172a] rounded-full p-0.5">
                           <RankIcon rank={player.rank} size={20} />

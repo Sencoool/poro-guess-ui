@@ -35,28 +35,28 @@ const GuessRow = ({ guess, index, isWon, isNew }: { guess: any, index: number, i
 
   return (
     <div className="grid grid-cols-8 gap-2">
-      <div className="flex justify-center items-center bg-zinc-800/80 backdrop-blur-md border border-white/5 rounded-xl p-2 w-[150px] shadow-sm" style={getStyle(0)}>
+      <div className="flex justify-center items-center bg-zinc-800/80 border border-white/5 rounded-xl p-2 w-[150px] shadow-sm" style={getStyle(0)}>
         <img src={getImageUrl(guess.champion.iconPath)} alt={guess.champion.name} className="w-14 h-14 object-cover rounded shadow-md border border-white/10" onError={(e) => (e.currentTarget.src = "/img/Red.png")} />
       </div>
-      <div className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm font-bold tracking-wide border text-center ${isWon && index === 0 ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-zinc-800/50 text-zinc-300 border-white/5"}`} style={getStyle(0.1)}>
+      <div className={`flex justify-center items-center rounded-xl p-3 w-[150px] shadow-sm font-bold tracking-wide border text-center ${isWon && index === 0 ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-zinc-800/80 text-zinc-300 border-white/5"}`} style={getStyle(0.1)}>
         {guess.champion.name}
       </div>
-      <div className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.gender)}`} style={getStyle(0.2)}>
+      <div className={`flex justify-center items-center rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.gender)}`} style={getStyle(0.2)}>
         {guess.champion.gender}
       </div>
-      <div className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.role)}`} style={getStyle(0.3)}>
+      <div className={`flex justify-center items-center rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.role)}`} style={getStyle(0.3)}>
         {guess.champion.role}
       </div>
-      <div className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.damageType)}`} style={getStyle(0.4)}>
+      <div className={`flex justify-center items-center rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.damageType)}`} style={getStyle(0.4)}>
         {guess.champion.damageType}
       </div>
-      <div className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.resource)}`} style={getStyle(0.5)}>
+      <div className={`flex justify-center items-center rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.resource)}`} style={getStyle(0.5)}>
         {guess.champion.resource}
       </div>
-      <div className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.rangeType)}`} style={getStyle(0.6)}>
+      <div className={`flex justify-center items-center rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.rangeType)}`} style={getStyle(0.6)}>
         {guess.champion.rangeType}
       </div>
-      <div className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm font-bold border relative text-center ${getColor(guess.comparison?.yearRelease)}`} style={getStyle(0.7)}>
+      <div className={`flex justify-center items-center rounded-xl p-3 w-[150px] shadow-sm font-bold border relative text-center ${getColor(guess.comparison?.yearRelease)}`} style={getStyle(0.7)}>
         {guess.champion.yearRelease}
         {guess.comparison?.yearRelease === 'HIGHER' && <span className="absolute right-4 font-black text-xl animate-bounce">↑</span>}
         {guess.comparison?.yearRelease === 'LOWER' && <span className="absolute right-4 font-black text-xl animate-bounce">↓</span>}
@@ -75,6 +75,7 @@ export default function Home() {
     initializeSession,
     fetchInitialData,
     makeGuess,
+    setActiveMode,
     showVictoryModalMode,
     clearVictoryModal
   } = useGameStore();
@@ -111,9 +112,11 @@ export default function Home() {
   // Initialize Session and Game Data
   useEffect(() => {
     initializeSession().then(() => {
-      fetchInitialData();
+      fetchInitialData().then(() => {
+        setActiveMode('CLASSIC');
+      });
     });
-  }, [initializeSession, fetchInitialData]);
+  }, [initializeSession, fetchInitialData, setActiveMode]);
 
   // Watch for win condition from store
   useEffect(() => {
@@ -185,8 +188,11 @@ export default function Home() {
     setSelectedIndex(-1);
   }, [search]);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   // Loading state
-  if (!user || !activeChallenge || championsList.length === 0) {
+  if (!mounted || !user || !activeChallenge || championsList.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black text-white">
         <h1 className="text-2xl font-bold animate-pulse">Loading Game...</h1>
@@ -204,7 +210,7 @@ export default function Home() {
       <main className="flex flex-col items-center flex-grow py-2 container mx-auto xl:pt-[100px] pt-[50px] select-none text-white z-10 relative">
         
         {/* search box container */}
-        <div className="flex flex-col items-center container mx-auto bg-[#1E293B]/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl max-w-1/4 min-h-[300px] min-w-3/4 md:min-w-[500px] relative">
+        <div className="flex flex-col items-center container mx-auto bg-[#1E293B]/95 border border-white/10 p-8 rounded-3xl shadow-2xl max-w-1/4 min-h-[300px] min-w-3/4 md:min-w-[500px] relative">
           
           <button 
             onClick={() => setShowTutorial(true)}
@@ -328,25 +334,18 @@ export default function Home() {
 
           {/* The actual hint text when opened */}
           {showHint && progress?.hint && (
-            <div className="mb-4 p-5 bg-[#1E293B]/90 backdrop-blur-md rounded-2xl border border-yellow-500/30 max-w-2xl text-center shadow-lg animate-fade-in-up w-full">
+            <div className="mb-4 p-5 bg-[#1E293B] rounded-2xl border border-yellow-500/30 max-w-2xl text-center shadow-lg animate-fade-in-up w-full">
               <p className="text-zinc-300 leading-relaxed italic text-lg">"{progress.hint}"</p>
             </div>
           )}
         </div>
 
-        {progress?.isWon && (
-          <div className="mt-4 mb-4 bg-[#1E293B]/80 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-lg animate-fade-in">
-            <p className="text-xl font-light tracking-wide text-zinc-300">
-              Total Guesses <span className="font-bold text-blue-400">({progress?.guesses.length || 0})</span>
-            </p>
-          </div>
-        )}
         <p className="md:hidden text-zinc-500 text-sm mb-4 bg-black/50 px-3 py-1 rounded-full mt-4">Swipe ➜ to see more</p>
 
         {/* Table Container */}
         <div className="flex flex-col items-center mt-4 pl-5 pr-5 w-full overflow-x-auto scrollbar-hidden">
           {/* Table Header */}
-          <div className="w-[1256px] grid grid-cols-8 gap-2 bg-zinc-800/80 backdrop-blur-md text-zinc-400 font-bold uppercase tracking-wider rounded-xl mb-4 shadow-lg border border-white/5">
+          <div className="w-[1256px] grid grid-cols-8 gap-2 bg-zinc-800/95 text-zinc-400 font-bold uppercase tracking-wider rounded-xl mb-4 shadow-lg border border-white/5">
             <div className="flex justify-center items-center py-4 w-[150px]">Icon</div>
             <div className="flex justify-center items-center py-4 w-[150px]">Name</div>
             <div className="flex justify-center items-center py-4 w-[150px]">Gender</div>
@@ -360,7 +359,7 @@ export default function Home() {
           {/* guesses list */}
           <div className="w-[1256px] mb-20 flex flex-col gap-3">
             {!progress || progress.guesses.length === 0 ? (
-              <div className="flex justify-center items-center bg-[#1E293B]/40 backdrop-blur-sm border border-white/10 rounded-xl p-8 w-full text-zinc-500 italic">
+              <div className="flex justify-center items-center bg-[#1E293B]/60 border border-white/10 rounded-xl p-8 w-full text-zinc-500 italic">
                 Type your first guess above!
               </div>
             ) : (

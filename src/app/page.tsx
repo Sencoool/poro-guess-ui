@@ -14,14 +14,14 @@ const GAME_MODES = [
   {
     id: "jigsaw",
     title: "Splash Jigsaw",
-    href: "#",
-    disabled: true,
+    href: "/jigsaw",
+    disabled: false,
   },
   {
     id: "traits",
     title: "Traits",
-    href: "#",
-    disabled: true,
+    href: "/traits",
+    disabled: false,
   },
   {
     id: "matcher",
@@ -39,7 +39,7 @@ export default function HomePage() {
       <main className="flex-grow flex flex-col items-center justify-center p-6 z-10">
         
         {/* Central Dark Container */}
-        <div className="bg-[#1E293B]/95 backdrop-blur-md rounded-3xl p-10 md:p-14 shadow-2xl flex flex-col items-center min-w-[300px] sm:min-w-[400px] md:min-w-[500px]">
+        <div className="bg-[#1E293B]/95 rounded-3xl p-10 md:p-14 shadow-2xl flex flex-col items-center min-w-[300px] sm:min-w-[400px] md:min-w-[500px]">
           
           <h1 className="text-4xl md:text-5xl font-medium tracking-wide mb-10 text-center">
             PoroGuess

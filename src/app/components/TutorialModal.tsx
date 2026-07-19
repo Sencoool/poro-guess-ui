@@ -26,14 +26,14 @@ export default function TutorialModal({ show, onClose, title, content }: Tutoria
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/70 z-50 animate-fade-in backdrop-blur-sm" 
+        className="fixed inset-0 bg-black/80 z-50 animate-fade-in will-change-opacity" 
         onClick={onClose} 
       />
 
       {/* Modal */}
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
         <div 
-          className="pointer-events-auto relative w-full max-w-md bg-[#1E293B] border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
+          className="pointer-events-auto relative w-full max-w-md bg-[#1E293B] border border-white/10 rounded-3xl shadow-2xl overflow-hidden will-change-transform"
           style={{
             animation: "answerDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards",
           }}

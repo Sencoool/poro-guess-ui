@@ -146,10 +146,13 @@ export default function TraitsPage() {
     setSelectedIndex(-1);
   }, [search]);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   // Loading state
-  if (!user || !activeChallenge || !traitsChallenge || championsList.length === 0 || !gameState) {
+  if (!mounted || !user || !activeChallenge || !traitsChallenge || championsList.length === 0 || !gameState) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#111827] text-white">
+      <div className="flex items-center justify-center min-h-screen bg-black text-white">
         <h1 className="text-2xl font-bold animate-pulse">Loading Game...</h1>
       </div>
     );

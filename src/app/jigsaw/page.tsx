@@ -113,7 +113,7 @@ export default function Jigsaw() {
     }
     setSearch([]);
     
-    await makeGuess(champion.id, { score: gameState?.score });
+    await makeGuess(champion.id, { score: gameState?.score ?? 10 });
     
     // Add unlock if wrong
     const newProgress = useGameStore.getState().jigsawProgress; // get updated progress
@@ -126,7 +126,10 @@ export default function Jigsaw() {
     setSelectedIndex(-1);
   }, [search]);
 
-  if (!user || !activeChallenge || !jigsawChallenge || championsList.length === 0 || !gameState) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted || !user || !activeChallenge || !jigsawChallenge || championsList.length === 0 || !gameState) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black text-white">
         <h1 className="text-2xl font-bold animate-pulse">Loading Game...</h1>
@@ -146,7 +149,7 @@ export default function Jigsaw() {
       <Header />
       <main className="flex flex-col items-center flex-grow py-2 container mx-auto xl:pt-[100px] pt-[50px] select-none text-white z-10 relative">
         
-        <div className="flex flex-col items-center container mx-auto bg-[#1E293B]/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl max-w-1/4 md:min-w-[600px] lg:min-w-[800px] relative">
+        <div className="flex flex-col items-center container mx-auto bg-[#1E293B]/95 border border-white/10 p-8 rounded-3xl shadow-2xl max-w-1/4 md:min-w-[600px] lg:min-w-[800px] relative">
           
           <button 
             onClick={() => setShowTutorial(true)}
@@ -324,6 +327,7 @@ export default function Jigsaw() {
           targetChamp={targetChamp}
           progress={progress}
           mode="JIGSAW"
+          jigsawScore={gameState?.score ?? 10}
         />
 
         <TutorialModal 
