@@ -42,9 +42,10 @@ export interface ChampionEntity {
 
 export interface DailyChallengeResponse {
   id: number;
-  mode: string;
+  mode: 'CLASSIC' | 'JIGSAW' | 'TRAITS' | 'MATCHER';
   imagePath?: string;
   matcherChampions?: number[];
+  traits?: string[];
 }
 
 export interface ChampionGuessResult {
@@ -71,6 +72,13 @@ export interface UserProgressResponse {
   hint?: string;
   traits?: string[];
   targetChampionId?: number;
+  scoreGained?: number;
+  oldRank?: string;
+  newRank?: string;
+  oldStreak?: number;
+  newStreak?: number;
+  oldScore?: number;
+  newScore?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -84,6 +92,15 @@ export interface UserProfileResponse {
   isGuest: boolean;
 }
 
+export interface LeaderboardUserResponse {
+  id: string;
+  username: string;
+  rank: string;
+  score: number;
+  streak: number;
+  iconPath: string;
+}
+
 // --- API Services ---
 
 export const UserService = {
@@ -93,6 +110,10 @@ export const UserService = {
   },
   getUser: async (id: string): Promise<UserProfileResponse> => {
     const response = await api.get(`/users/${id}`);
+    return response.data;
+  },
+  getLeaderboard: async (page: number = 1): Promise<LeaderboardUserResponse[]> => {
+    const response = await api.get(`/users/leaderboard?page=${page}`);
     return response.data;
   },
 };
@@ -116,9 +137,15 @@ export const UserProgressService = {
     const response = await api.get(`/user-progress/${userId}/${dailyChallengeId}`);
     return response.data;
   },
-  makeGuess: async (userId: string, dailyChallengeId: number, championId: number): Promise<UserProgressResponse> => {
+  makeGuess: async (
+    userId: string, 
+    dailyChallengeId: number, 
+    championId?: number,
+    options?: { moves?: number; timeElapsed?: number; isWon?: boolean; score?: number }
+  ): Promise<UserProgressResponse> => {
     const response = await api.post(`/user-progress/${userId}/${dailyChallengeId}/guess`, {
       championId,
+      ...options,
     });
     return response.data;
   },

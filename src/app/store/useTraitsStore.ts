@@ -2,21 +2,21 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useGameStore } from './useGameStore';
 
-interface JigsawState {
+interface TraitsState {
   // challengeId -> state
   games: Record<number, {
-    revealedTiles: number[];
+    revealedTraits: number[];
     availableUnlocks: number;
     score: number;
     isGivenUp: boolean;
   }>;
   initGame: (challengeId: number) => void;
-  revealTile: (challengeId: number, tileIndex: number) => void;
+  revealTrait: (challengeId: number, traitIndex: number) => void;
   addUnlock: (challengeId: number) => void;
   giveUp: (challengeId: number) => void;
 }
 
-export const useJigsawStore = create<JigsawState>()(
+export const useTraitsStore = create<TraitsState>()(
   persist(
     (set, get) => ({
       games: {},
@@ -27,32 +27,28 @@ export const useJigsawStore = create<JigsawState>()(
             games: {
               ...games,
               [challengeId]: {
-                revealedTiles: [],
-                availableUnlocks: 1, // Start with 1 unlock manually clicked by user
-                score: 10,
+                revealedTraits: [],
+                availableUnlocks: 1, // Start with 1 free unlock
+                score: 12, // Start with 12 score
                 isGivenUp: false,
               },
             },
           });
         }
       },
-      revealTile: (challengeId, tileIndex) => {
+      revealTrait: (challengeId, traitIndex) => {
         const state = get().games[challengeId];
         if (!state) return;
-        if (state.revealedTiles.includes(tileIndex)) return;
+        if (state.revealedTraits.includes(traitIndex)) return;
         if (state.availableUnlocks <= 0) return;
 
-        // If it's the very first tile, score stays 10. Otherwise, reduce by 2.
-        const newScore = state.revealedTiles.length === 0 ? 10 : Math.max(0, state.score - 2);
-        
         set({
           games: {
             ...get().games,
             [challengeId]: {
               ...state,
-              revealedTiles: [...state.revealedTiles, tileIndex],
+              revealedTraits: [...state.revealedTraits, traitIndex],
               availableUnlocks: state.availableUnlocks - 1,
-              score: newScore,
             },
           },
         });
@@ -60,16 +56,27 @@ export const useJigsawStore = create<JigsawState>()(
       addUnlock: (challengeId) => {
         const state = get().games[challengeId];
         if (!state) return;
-        // Max 5 extra clicks (so total 6 tiles max).
-        // Since first click is free, there are 5 wrong guesses max.
-        // Each wrong guess adds 1 unlock. But if they already opened 6 tiles, no more unlocks.
-        if (state.revealedTiles.length + state.availableUnlocks < 6) {
+        
+        const newScore = Math.max(0, state.score - 3);
+        
+        if (state.revealedTraits.length + state.availableUnlocks < 5) {
           set({
             games: {
               ...get().games,
               [challengeId]: {
                 ...state,
                 availableUnlocks: state.availableUnlocks + 1,
+                score: newScore,
+              },
+            },
+          });
+        } else {
+          set({
+            games: {
+              ...get().games,
+              [challengeId]: {
+                ...state,
+                score: newScore,
               },
             },
           });
@@ -87,11 +94,11 @@ export const useJigsawStore = create<JigsawState>()(
             },
           },
         });
-        useGameStore.getState().triggerVictoryModal('JIGSAW');
+        useGameStore.getState().triggerVictoryModal('TRAITS');
       }
     }),
     {
-      name: 'poro-guess-jigsaw-storage',
+      name: 'poro-guess-traits-storage',
     }
   )
 );

@@ -25,9 +25,9 @@ const GAME_MODES = [
   },
   {
     id: "matcher",
-    title: "Skin Matcher",
-    href: "#",
-    disabled: true,
+    title: "Icon Matcher",
+    href: "/matcher",
+    disabled: false,
   },
 ];
 

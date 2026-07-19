@@ -77,3 +77,19 @@ body {
   color: var(--foreground);
   font-family: monospace, Helvetica, sans-serif;
 }
+
+/* Matcher card styles — pure CSS, no Tailwind group-hover overhead */
+.card-back {
+  border-radius: 0.75rem;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  background-color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.card-btn:not(:disabled):hover .card-back {
+  border-color: rgba(96, 165, 250, 0.65);
+  background-color: #1e293b;
+}

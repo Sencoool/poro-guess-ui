@@ -19,20 +19,29 @@ interface GameState {
   // Game data state
   classicChallenge: DailyChallengeResponse | null;
   jigsawChallenge: DailyChallengeResponse | null;
+  traitsChallenge: DailyChallengeResponse | null;
   activeChallenge: DailyChallengeResponse | null;
   championsList: ChampionEntity[];
   isLoadingData: boolean;
   
   // Progress state
-  progress: UserProgressResponse | null;
+  classicProgress: UserProgressResponse | null;
+  jigsawProgress: UserProgressResponse | null;
+  traitsProgress: UserProgressResponse | null;
   isSubmittingGuess: boolean;
+  
+  // Modal trigger state
+  showVictoryModalMode: 'CLASSIC' | 'JIGSAW' | 'TRAITS' | 'MATCHER' | null;
+  triggerVictoryModal: (mode: 'CLASSIC' | 'JIGSAW' | 'TRAITS' | 'MATCHER') => void;
+  clearVictoryModal: () => void;
   
   // Actions
   initializeSession: () => Promise<void>;
   fetchInitialData: () => Promise<void>;
-  setActiveMode: (mode: 'CLASSIC' | 'JIGSAW') => Promise<void>;
+  setActiveMode: (mode: 'CLASSIC' | 'JIGSAW' | 'TRAITS') => Promise<void>;
   loadProgress: () => Promise<void>;
-  makeGuess: (championId: number) => Promise<void>;
+  makeGuess: (championId?: number, options?: { moves?: number; timeElapsed?: number; isWon?: boolean; score?: number }) => Promise<void>;
+  refreshUser: () => Promise<void>;
   resetProgress: () => void;
 }
 
@@ -45,12 +54,19 @@ export const useGameStore = create<GameState>()(
       
       classicChallenge: null,
       jigsawChallenge: null,
+      traitsChallenge: null,
       activeChallenge: null,
       championsList: [],
       isLoadingData: false,
       
-      progress: null,
+      classicProgress: null,
+      jigsawProgress: null,
+      traitsProgress: null,
       isSubmittingGuess: false,
+      
+      showVictoryModalMode: null,
+      triggerVictoryModal: (mode) => set({ showVictoryModalMode: mode }),
+      clearVictoryModal: () => set({ showVictoryModalMode: null }),
       
       // Initialize User Session
       initializeSession: async () => {
@@ -89,10 +105,12 @@ export const useGameStore = create<GameState>()(
           
           const classicChallenge = challenges.find(c => c.mode === 'CLASSIC') || null;
           const jigsawChallenge = challenges.find(c => c.mode === 'JIGSAW') || null;
+          const traitsChallenge = challenges.find(c => c.mode === 'TRAITS') || null;
           
           set({ 
             classicChallenge,
             jigsawChallenge,
+            traitsChallenge,
             // default to classic, or can be set by the page
             activeChallenge: get().activeChallenge || classicChallenge,
             championsList: champions,
@@ -111,12 +129,12 @@ export const useGameStore = create<GameState>()(
       },
       
       // Set active mode
-      setActiveMode: async (mode: 'CLASSIC' | 'JIGSAW') => {
-        const { classicChallenge, jigsawChallenge, activeChallenge } = get();
-        const nextChallenge = mode === 'CLASSIC' ? classicChallenge : jigsawChallenge;
+      setActiveMode: async (mode: 'CLASSIC' | 'JIGSAW' | 'TRAITS') => {
+        const { classicChallenge, jigsawChallenge, traitsChallenge, activeChallenge } = get();
+        const nextChallenge = mode === 'CLASSIC' ? classicChallenge : mode === 'JIGSAW' ? jigsawChallenge : traitsChallenge;
         
         if (nextChallenge && nextChallenge.id !== activeChallenge?.id) {
-          set({ activeChallenge: nextChallenge, progress: null });
+          set({ activeChallenge: nextChallenge });
           // Load progress for new active challenge
           await get().loadProgress();
         }
@@ -127,13 +145,26 @@ export const useGameStore = create<GameState>()(
         const { user, activeChallenge } = get();
         if (!user || !activeChallenge) return;
         
+        const isClassic = activeChallenge.mode === 'CLASSIC';
+        const isJigsaw = activeChallenge.mode === 'JIGSAW';
+        
         try {
           const progress = await UserProgressService.getProgress(user.id, activeChallenge.id);
-          set({ progress });
+          // Prevent race condition: only update if activeChallenge hasn't changed during fetch
+          if (get().activeChallenge?.id === activeChallenge.id) {
+            if (isClassic) set({ classicProgress: progress });
+            else if (isJigsaw) set({ jigsawProgress: progress });
+            else set({ traitsProgress: progress });
+          }
         } catch (e: any) {
+          // Prevent race condition
+          if (get().activeChallenge?.id !== activeChallenge.id) return;
+          
           if (e.response?.status === 404) {
             // No progress yet, this is fine
-            set({ progress: null });
+            if (isClassic) set({ classicProgress: null });
+            else if (isJigsaw) set({ jigsawProgress: null });
+            else set({ traitsProgress: null });
           } else {
             console.error('Failed to load progress:', e);
           }
@@ -141,22 +172,44 @@ export const useGameStore = create<GameState>()(
       },
       
       // Make a guess
-      makeGuess: async (championId: number) => {
-        const { user, activeChallenge, progress } = get();
+      makeGuess: async (championId?: number, options?: { moves?: number; timeElapsed?: number; isWon?: boolean; score?: number }) => {
+        const { user, activeChallenge, classicProgress, jigsawProgress, traitsProgress } = get();
         if (!user || !activeChallenge) return;
-        if (progress?.isWon) return; // Already won
+        
+        const isClassic = activeChallenge.mode === 'CLASSIC';
+        const isJigsaw = activeChallenge.mode === 'JIGSAW';
+        const currentProgress = isClassic ? classicProgress : isJigsaw ? jigsawProgress : traitsProgress;
+        
+        if (currentProgress?.isWon) return; // Already won
         
         try {
           set({ isSubmittingGuess: true });
-          const newProgress = await UserProgressService.makeGuess(user.id, activeChallenge.id, championId);
-          set({ progress: newProgress, isSubmittingGuess: false });
+          const newProgress = await UserProgressService.makeGuess(user.id, activeChallenge.id, championId, options);
+          if (isClassic) set({ classicProgress: newProgress, isSubmittingGuess: false });
+          else if (isJigsaw) set({ jigsawProgress: newProgress, isSubmittingGuess: false });
+          else set({ traitsProgress: newProgress, isSubmittingGuess: false });
+          
+          if (newProgress.isWon && !currentProgress?.isWon) {
+             set({ showVictoryModalMode: activeChallenge.mode });
+          }
         } catch (e) {
           console.error('Failed to submit guess:', e);
           set({ isSubmittingGuess: false });
         }
       },
       
-      resetProgress: () => set({ progress: null }),
+      refreshUser: async () => {
+        const { user } = get();
+        if (!user) return;
+        try {
+          const freshUser = await UserService.getUser(user.id);
+          set({ user: freshUser });
+        } catch (e) {
+          console.error('Failed to refresh user:', e);
+        }
+      },
+
+      resetProgress: () => set({ classicProgress: null, jigsawProgress: null, traitsProgress: null }),
     }),
     {
       name: 'poro-guess-storage',

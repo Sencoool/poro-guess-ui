@@ -6,25 +6,107 @@ import Footer from "../components/footer";
 import { useGameStore } from "../store/useGameStore";
 import { ChampionEntity } from "../utils/api";
 import { getImageUrl } from "../utils/image";
+import confetti from "canvas-confetti";
+import VictoryModal from "../components/VictoryModal";
+import TutorialModal from "../components/TutorialModal";
+import CountdownTimer from "../components/CountdownTimer";
+const GuessRow = ({ guess, index, isWon, isNew }: { guess: any, index: number, isWon: boolean, isNew: boolean }) => {
+  const getColor = (val?: string) => {
+    switch (val) {
+      case 'MATCH':
+        return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+      case 'PARTIAL':
+        return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+      case 'MISMATCH':
+        return 'bg-rose-500/20 text-rose-400 border-rose-500/30';
+      case 'HIGHER':
+      case 'LOWER':
+        return 'bg-rose-500/20 text-rose-400 border-rose-500/30';
+      default:
+        return 'bg-zinc-800/50 text-zinc-300 border-white/5';
+    }
+  };
+
+  const getStyle = (delay: number) => isNew ? {
+    animation: `answerDown 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards`,
+    animationDelay: `${delay}s`,
+    opacity: 0
+  } : { opacity: 1 };
+
+  return (
+    <div className="grid grid-cols-8 gap-2">
+      <div className="flex justify-center items-center bg-zinc-800/80 backdrop-blur-md border border-white/5 rounded-xl p-2 w-[150px] shadow-sm" style={getStyle(0)}>
+        <img src={getImageUrl(guess.champion.iconPath)} alt={guess.champion.name} className="w-14 h-14 object-cover rounded shadow-md border border-white/10" onError={(e) => (e.currentTarget.src = "/img/Red.png")} />
+      </div>
+      <div className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm font-bold tracking-wide border text-center ${isWon && index === 0 ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-zinc-800/50 text-zinc-300 border-white/5"}`} style={getStyle(0.1)}>
+        {guess.champion.name}
+      </div>
+      <div className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.gender)}`} style={getStyle(0.2)}>
+        {guess.champion.gender}
+      </div>
+      <div className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.role)}`} style={getStyle(0.3)}>
+        {guess.champion.role}
+      </div>
+      <div className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.damageType)}`} style={getStyle(0.4)}>
+        {guess.champion.damageType}
+      </div>
+      <div className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.resource)}`} style={getStyle(0.5)}>
+        {guess.champion.resource}
+      </div>
+      <div className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm font-medium border text-center ${getColor(guess.comparison?.rangeType)}`} style={getStyle(0.6)}>
+        {guess.champion.rangeType}
+      </div>
+      <div className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm font-bold border relative text-center ${getColor(guess.comparison?.yearRelease)}`} style={getStyle(0.7)}>
+        {guess.champion.yearRelease}
+        {guess.comparison?.yearRelease === 'HIGHER' && <span className="absolute right-4 font-black text-xl animate-bounce">↑</span>}
+        {guess.comparison?.yearRelease === 'LOWER' && <span className="absolute right-4 font-black text-xl animate-bounce">↓</span>}
+      </div>
+    </div>
+  );
+};
 
 export default function Home() {
   const {
     user,
     activeChallenge,
     championsList,
-    progress,
+    classicProgress: progress,
     isSubmittingGuess,
     initializeSession,
     fetchInitialData,
     makeGuess,
+    showVictoryModalMode,
+    clearVictoryModal
   } = useGameStore();
 
   const [search, setSearch] = useState<ChampionEntity[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [showHint, setShowHint] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   
   const domSearch = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Track which guesses have already been animated
+  const animatedGuesses = useRef<Set<number>>(new Set());
+  const initialLoadDone = useRef(false);
+
+  // Prevent animation on initial load, only animate newly added guesses
+  useEffect(() => {
+    if (progress) {
+      if (!initialLoadDone.current) {
+        progress.guesses.forEach(g => animatedGuesses.current.add(g.champion.id));
+        initialLoadDone.current = true;
+      } else {
+        // We add new guesses to the set so they don't animate again on next render
+        progress.guesses.forEach(g => animatedGuesses.current.add(g.champion.id));
+      }
+    } else {
+      initialLoadDone.current = false;
+      animatedGuesses.current.clear();
+    }
+  }, [progress]);
 
   // Initialize Session and Game Data
   useEffect(() => {
@@ -32,6 +114,27 @@ export default function Home() {
       fetchInitialData();
     });
   }, [initializeSession, fetchInitialData]);
+
+  // Watch for win condition from store
+  useEffect(() => {
+    if (showVictoryModalMode === 'CLASSIC') {
+      setShowModal(true);
+      
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+      const particleCount = 150;
+      
+      confetti({
+        ...defaults, particleCount,
+        origin: { x: 0.2, y: 0.5 }
+      });
+      confetti({
+        ...defaults, particleCount,
+        origin: { x: 0.8, y: 0.5 }
+      });
+      
+      clearVictoryModal();
+    }
+  }, [showVictoryModalMode, clearVictoryModal]);
 
   // Handle Search Input
   const searchCharacter = (input: string) => {
@@ -42,7 +145,9 @@ export default function Home() {
       
       // Remove already guessed champions from search results
       const guessedIds = progress?.guesses.map(g => g.champion.id) || [];
-      const filteredData = data.filter(c => !guessedIds.includes(c.id));
+      const filteredData = data
+        .filter(c => !guessedIds.includes(c.id))
+        .slice(0, 20); // Limit results to improve performance
       
       setSearch(filteredData);
     } else {
@@ -89,22 +194,9 @@ export default function Home() {
     );
   }
 
-  // Get Comparison Color (Premium Palette)
-  const getColor = (result?: string) => {
-    switch (result) {
-      case 'MATCH':
-        return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'; // Premium Green
-      case 'PARTIAL':
-        return 'bg-amber-500/20 text-amber-400 border-amber-500/30'; // Premium Orange
-      case 'MISMATCH':
-        return 'bg-rose-500/20 text-rose-400 border-rose-500/30'; // Premium Red
-      case 'HIGHER':
-      case 'LOWER':
-        return 'bg-rose-500/20 text-rose-400 border-rose-500/30';
-      default:
-        return 'bg-zinc-800/50 text-zinc-300 border-white/5'; // Gray fallback
-    }
-  };
+  const targetChamp = progress?.isWon
+    ? championsList.find(c => c.id === progress?.targetChampionId) ?? null
+    : null;
 
   return (
     <>
@@ -112,30 +204,59 @@ export default function Home() {
       <main className="flex flex-col items-center flex-grow py-2 container mx-auto xl:pt-[100px] pt-[50px] select-none text-white z-10 relative">
         
         {/* search box container */}
-        <div className="flex flex-col items-center container mx-auto bg-[#1E293B]/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl max-w-1/4 min-h-[300px] min-w-3/4 md:min-w-[500px]">
+        <div className="flex flex-col items-center container mx-auto bg-[#1E293B]/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl max-w-1/4 min-h-[300px] min-w-3/4 md:min-w-[500px] relative">
+          
+          <button 
+            onClick={() => setShowTutorial(true)}
+            className="absolute top-6 right-6 w-8 h-8 rounded-full bg-zinc-800 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
+            title="How to play"
+          >
+            ?
+          </button>
+
           <h1 className="text-3xl md:text-4xl font-semibold mb-8 text-center tracking-wide">
             Poro Guess <span className="text-blue-400 font-light">Classic</span>
           </h1>
 
-          <div className="flex flex-col items-center w-full relative">
-            {/* search input */}
-            <input
-              type="text"
-              name="search"
-              id="search"
-              className="bg-[#0B1121]/80 text-white placeholder-zinc-500 px-6 py-4 w-full md:w-3/4 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500/50 border border-white/20 transition-all text-lg shadow-inner"
-              placeholder={progress?.isWon ? "Game Over! You won." : "Type a champion name..."}
-              onChange={(e) => searchCharacter(e.target.value)}
-              onKeyDown={handleKeyDown}
-              ref={inputRef}
-              autoComplete="off"
-              disabled={progress?.isWon || isSubmittingGuess}
-            />
+          <div className="w-[85%] md:w-3/4 flex flex-col items-center justify-center relative z-20">
+            {progress?.isWon && targetChamp ? (
+              <div className="w-full flex flex-col gap-2">
+                <CountdownTimer className="text-zinc-400 text-sm mb-1" />
+                <div 
+                  onClick={() => setShowModal(true)}
+                  className="w-full flex items-center justify-between p-4 bg-zinc-300 rounded-xl cursor-pointer hover:bg-zinc-200 transition-colors shadow-sm text-black group animate-fade-in"
+                >
+                  <div className="flex items-center gap-4 font-bold text-lg">
+                    <img
+                      src={getImageUrl(targetChamp.iconPath)}
+                      alt={targetChamp.name}
+                      className="w-12 h-12 rounded-full object-cover shadow-sm border border-black/10"
+                      onError={(e) => (e.currentTarget.src = "/img/Red.png")}
+                    />
+                    <span className="tracking-wide uppercase">{targetChamp.name}</span>
+                  </div>
+                  <div className="text-zinc-500 group-hover:text-zinc-800 transition-colors text-sm font-bold flex items-center gap-1">
+                    <span>View Result</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <input
+                className="w-full bg-[#111620] border border-blue-500/30 text-white p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] placeholder-zinc-500 disabled:opacity-50"
+                placeholder="Type a champion name..."
+                onChange={(e) => searchCharacter(e.target.value)}
+                onKeyDown={handleKeyDown}
+                ref={inputRef}
+                autoComplete="off"
+                disabled={isSubmittingGuess}
+              />
+            )}
 
             {/* select dropdown */}
             <div
               ref={domSearch}
-              className={`w-full md:w-3/4 max-h-[250px] overflow-y-auto flex flex-col border border-white/10 bg-zinc-900/95 backdrop-blur-xl rounded-xl absolute top-[60px] shadow-2xl z-50 ${inputRef.current?.value == "" || progress?.isWon ? "hidden" : "block"}`}
+              className={`w-full md:w-3/4 max-h-[300px] overflow-y-auto flex flex-col border border-white/10 bg-zinc-900 rounded-xl absolute top-[60px] shadow-2xl z-50 ${inputRef.current?.value == "" || progress?.isWon ? "hidden" : "block"}`}
             >
               {search.length === 0 && inputRef.current?.value !== "" ? (
                 <div className="flex items-center justify-center p-4 text-zinc-500 italic">
@@ -244,142 +365,67 @@ export default function Home() {
               </div>
             ) : (
               [...progress.guesses].reverse().map((guess, index) => {
-                // If it's the most recent guess (index === 0), run the reveal animation.
-                // Otherwise, show it instantly without animation so old rows don't animate.
-                const isNewGuess = index === 0 && !progress.isWon; // If won, we might want to skip or keep it
-                // Actually, if we just use static classes for old rows, it's better. But since React might re-mount or we rely on index, we can just disable animation for index > 0.
-                const animDuration = "0.6s";
-                const getStyle = (delay: number) => index === 0 ? {
-                  animation: `slideDown ${animDuration} cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards`,
-                  animationDelay: `${delay}s`
-                } : { opacity: 1 };
-                
-                const getOpacityClass = () => index === 0 ? "opacity-0" : "opacity-100";
-
+                const isNewGuess = initialLoadDone.current && !animatedGuesses.current.has(guess.champion.id);
                 return (
-                <div className="grid grid-cols-8 gap-2" key={progress.guesses.length - index}>
-                  {/* Icon */}
-                  <div
-                    className={`flex justify-center items-center bg-zinc-800/80 backdrop-blur-md border border-white/5 rounded-xl p-2 w-[150px] shadow-sm slideDown ${getOpacityClass()}`}
-                    style={getStyle(0)}
-                  >
-                    <img
-                      src={getImageUrl(guess.champion.iconPath)}
-                      alt={guess.champion.name}
-                      className="w-14 h-14 object-cover rounded shadow-md border border-white/10"
-                      onError={(e) => (e.currentTarget.src = "/img/Red.png")}
-                    />
-                  </div>
-
-                  {/* Name */}
-                  <div
-                    className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm slideDown font-bold tracking-wide border transition-all text-center ${progress.isWon && index === 0 ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-zinc-800/50 text-zinc-300 border-white/5"} ${getOpacityClass()}`}
-                    style={getStyle(0.2)}
-                  >
-                    {guess.champion.name}
-                  </div>
-
-                  {/* Gender */}
-                  <div
-                    className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm slideDown font-medium border transition-all text-center ${getColor(guess.comparison?.gender)} ${getOpacityClass()}`}
-                    style={getStyle(0.4)}
-                  >
-                    {guess.champion.gender}
-                  </div>
-
-                  {/* Role */}
-                  <div
-                    className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm slideDown font-medium border transition-all text-center ${getColor(guess.comparison?.role)} ${getOpacityClass()}`}
-                    style={getStyle(0.6)}
-                  >
-                    {guess.champion.role}
-                  </div>
-
-                  {/* Damage Type */}
-                  <div
-                    className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm slideDown font-medium border transition-all text-center ${getColor(guess.comparison?.damageType)} ${getOpacityClass()}`}
-                    style={getStyle(0.8)}
-                  >
-                    {guess.champion.damageType}
-                  </div>
-
-                  {/* Resource */}
-                  <div
-                    className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm slideDown font-medium border transition-all text-center ${getColor(guess.comparison?.resource)} ${getOpacityClass()}`}
-                    style={getStyle(1.0)}
-                  >
-                    {guess.champion.resource}
-                  </div>
-
-                  {/* Range Type */}
-                  <div
-                    className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm slideDown font-medium border transition-all text-center ${getColor(guess.comparison?.rangeType)} ${getOpacityClass()}`}
-                    style={getStyle(1.2)}
-                  >
-                    {guess.champion.rangeType}
-                  </div>
-
-                  {/* Year Release */}
-                  <div
-                    className={`flex justify-center items-center backdrop-blur-md rounded-xl p-3 w-[150px] shadow-sm slideDown font-bold border transition-all relative text-center ${getColor(guess.comparison?.yearRelease)} ${getOpacityClass()}`}
-                    style={getStyle(1.4)}
-                  >
-                    {guess.champion.yearRelease}
-                    {guess.comparison?.yearRelease === 'HIGHER' && <span className="absolute right-4 font-black text-xl animate-bounce">↑</span>}
-                    {guess.comparison?.yearRelease === 'LOWER' && <span className="absolute right-4 font-black text-xl animate-bounce">↓</span>}
-                  </div>
-
-                </div>
-              )})
+                  <GuessRow 
+                    key={progress.guesses.length - index} 
+                    guess={guess} 
+                    index={index} 
+                    isWon={!!progress.isWon} 
+                    isNew={isNewGuess} 
+                  />
+                );
+              })
             )}
           </div>
         </div>
 
         {/* Victory Modal */}
-        {progress?.isWon && (
-          <>
-            {/* Backdrop Blur Overlay */}
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-fade-in" />
-            
-            <div
-              className="w-[90%] md:w-1/3 min-h-[300px] fixed top-[20%] flex flex-col items-center justify-center bg-[#1E293B]/90 backdrop-blur-xl border border-emerald-500/30 rounded-3xl z-50 opacity-0 shadow-[0_0_50px_rgba(16,185,129,0.2)]"
-              style={{
-                animation: "answerDown 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards",
-                animationDelay: "0.5s",
-              }}
-            >
-              <div className="flex flex-col items-center p-10 rounded-xl text-center relative overflow-hidden w-full">
-                {/* Background glow behind image */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-emerald-500/20 rounded-full blur-[60px]" />
-                
-                <h2 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-emerald-400 to-emerald-600 mb-8 drop-shadow-sm tracking-wide z-10">
-                  Victory!
-                </h2>
-                
-                {/* Show the target champion */}
-                <div className="relative z-10">
-                  <img 
-                    src={getImageUrl(progress.guesses[progress.guesses.length - 1].champion.iconPath)} 
-                    alt="Target Champion" 
-                    className="w-28 h-28 rounded-2xl shadow-2xl border-2 border-emerald-500/50 object-cover"
-                    onError={(e) => (e.currentTarget.src = "/img/Green.png")}
-                  />
+        <VictoryModal
+          show={showModal}
+          onClose={() => setShowModal(false)}
+          isWon={!!progress?.isWon}
+          targetChamp={targetChamp}
+          progress={progress}
+          mode="CLASSIC"
+        />
+        
+        <TutorialModal 
+          show={showTutorial} 
+          onClose={() => setShowTutorial(false)}
+          title="How to Play: Classic"
+          content={
+            <div className="space-y-4">
+              <p>Guess the <strong className="text-white">League of Legends champion</strong> from today's challenge!</p>
+              <ul className="list-disc pl-5 space-y-2">
+                <li>Type a champion's name to make a guess.</li>
+                <li>After each guess, the attributes will change color to show how close you are to the correct answer.</li>
+              </ul>
+              
+              <div className="space-y-3 mt-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded bg-emerald-500 flex-shrink-0"></div>
+                  <span className="text-sm"><strong className="text-emerald-400">Green:</strong> Exact match.</span>
                 </div>
-                
-                <p className="mt-6 text-3xl font-bold tracking-wide z-10">
-                  {progress.guesses[progress.guesses.length - 1].champion.name}
-                </p>
-                <p className="mt-3 text-emerald-400 font-medium bg-emerald-500/10 px-4 py-1 rounded-full border border-emerald-500/20 z-10">
-                  Solved in {progress.guesses.length} guesses
-                </p>
-                
-                <p className="mt-10 text-zinc-400 text-sm font-medium z-10">
-                  Come back tomorrow for a new challenge!
-                </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded bg-orange-400 flex-shrink-0"></div>
+                  <span className="text-sm"><strong className="text-orange-300">Orange:</strong> Partial match (e.g., shares one role or region).</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded bg-rose-500 flex-shrink-0"></div>
+                  <span className="text-sm"><strong className="text-rose-400">Red:</strong> No match at all.</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded bg-[#111620] border border-white/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-bold text-xs">↑/↓</span>
+                  </div>
+                  <span className="text-sm"><strong className="text-white">Arrows:</strong> Indicates if the correct year is higher or lower.</span>
+                </div>
               </div>
+              <p className="text-sm text-zinc-400 mt-2">Try to guess the champion in as few tries as possible!</p>
             </div>
-          </>
-        )}
+          }
+        />
       </main>
       <Footer />
     </>
